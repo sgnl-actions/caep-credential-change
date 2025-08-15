@@ -1,48 +1,156 @@
-name: job-template
-description: Template for SGNL JavaScript jobs - replace with your job description
+name: CAEP Credential Change
+description: Transmits a Continuous Access Evaluation Protocol (CAEP) Credential Change event as a Security Event Token (SET) to a specified endpoint
+version: 1.0.0
+runtime: nodejs-22
+type: caep-transmitter
 
-# Input parameters for web form generation
 inputs:
-  target:
+  audience:
     type: text
-    description: Target resource identifier (e.g., user email, group ID)
+    description: JWT audience claim - typically the CAEP event receiver's URL
+    required: true
+    validation:
+      min: 1
+      max: 500
+
+  subject:
+    type: text
+    description: JSON string containing the subject identifier in CAEP format
+    required: true
+    validation:
+      min: 1
+      max: 1000
+
+  address:
+    type: text
+    description: The URL endpoint to send the Security Event Token to
+    required: true
+    validation:
+      min: 1
+      max: 500
+
+  credentialType:
+    type: text
+    description: Type of credential that changed (password, x509, fido2, etc.)
     required: true
     validation:
       min: 1
       max: 100
 
-  action:
+  changeType:
     type: text
-    description: Action to perform on the target resource
+    description: Type of change that occurred (create, revoke, update, delete)
     required: true
     validation:
       min: 1
-      max: 50
+      max: 20
 
-  options:
-    type: array
-    description: Additional options for the operation
+  friendlyName:
+    type: text
+    description: Human-readable name for the credential (optional)
     required: false
-    item_type: text
     validation:
-      max: 10
+      min: 1
+      max: 200
 
-  dry_run:
-    type: boolean
-    description: Preview changes without executing them
+  x509Issuer:
+    type: text
+    description: X.509 certificate issuer (for x509 credential type)
     required: false
-    default: false
+    validation:
+      min: 1
+      max: 500
 
-# Expected output structure
+  x509Serial:
+    type: text
+    description: X.509 certificate serial number (for x509 credential type)
+    required: false
+    validation:
+      min: 1
+      max: 200
+
+  fido2AAGuid:
+    type: text
+    description: FIDO2 Authenticator Attestation GUID (for fido2 credential type)
+    required: false
+    validation:
+      min: 1
+      max: 100
+
+  issuer:
+    type: text
+    description: JWT issuer claim - defaults to 'https://sgnl.ai/'
+    required: false
+    validation:
+      min: 1
+      max: 200
+
+  addressSuffix:
+    type: text
+    description: Optional URL suffix to append to the address
+    required: false
+    validation:
+      min: 1
+      max: 200
+
+  signingMethod:
+    type: text
+    description: JWT signing algorithm - defaults to 'RS256'
+    required: false
+    validation:
+      min: 1
+      max: 20
+
+  eventTimestamp:
+    type: number
+    description: Unix timestamp of the event - defaults to current time
+    required: false
+
+  userAgent:
+    type: text
+    description: User-Agent header value - defaults to 'SGNL-Action-Framework/1.0'
+    required: false
+    validation:
+      min: 1
+      max: 200
+
+  initiatingEntity:
+    type: text
+    description: Optional entity that initiated the credential change
+    required: false
+    validation:
+      min: 1
+      max: 100
+
+  reasonAdmin:
+    type: text
+    description: Optional admin-readable reason for the change (JSON for i18n or plain string)
+    required: false
+    validation:
+      min: 1
+      max: 1000
+
+  reasonUser:
+    type: text
+    description: Optional user-readable reason for the change (JSON for i18n or plain string)
+    required: false
+    validation:
+      min: 1
+      max: 1000
+
 outputs:
   status:
     type: text
-    description: Operation result (success, failed, recovered, etc.)
+    description: Transmission status ('success' or 'failed')
 
-  target:
+  statusCode:
+    type: number
+    description: HTTP response status code
+
+  body:
     type: text
-    description: The target resource that was processed
+    description: HTTP response body
 
-  processed_at:
-    type: datetime
-    description: When the operation completed (ISO 8601)
+  retryable:
+    type: boolean
+    description: Whether the error is retryable (for failed requests)
