@@ -1,0 +1,36 @@
+{
+  "name": "@sgnl/job-template",
+  "version": "1.0.0",
+  "description": "Template for SGNL JavaScript jobs",
+  "type": "module",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "rollup -c",
+    "build:watch": "rollup -c -w",
+    "test": "NODE_OPTIONS=--experimental-vm-modules jest",
+    "test:watch": "NODE_OPTIONS=--experimental-vm-modules jest --watch",
+    "test:coverage": "NODE_OPTIONS=--experimental-vm-modules jest --coverage",
+    "lint": "eslint src tests",
+    "lint:fix": "eslint src tests --fix",
+    "validate": "node scripts/validate-metadata.js",
+    "dev": "node scripts/dev-runner.js"
+  },
+  "keywords": [
+    "sgnl",
+    "job",
+    "template",
+    "identity",
+    "security"
+  ],
+  "author": "SGNL Engineering",
+  "license": "MIT",
+  "devDependencies": {
+    "@eslint/js": "^9.17.0",
+    "@rollup/plugin-commonjs": "^28.0.1",
+    "@rollup/plugin-node-resolve": "^16.0.1",
+    "eslint": "^9.17.0",
+    "jest": "^30.0.5",
+    "js-yaml": "^4.1.0",
+    "rollup": "^4.28.1"
+  }
+}

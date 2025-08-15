@@ -1,0 +1,48 @@
+name: job-template
+description: Template for SGNL JavaScript jobs - replace with your job description
+
+# Input parameters for web form generation
+inputs:
+  target:
+    type: text
+    description: Target resource identifier (e.g., user email, group ID)
+    required: true
+    validation:
+      min: 1
+      max: 100
+
+  action:
+    type: text
+    description: Action to perform on the target resource
+    required: true
+    validation:
+      min: 1
+      max: 50
+
+  options:
+    type: array
+    description: Additional options for the operation
+    required: false
+    item_type: text
+    validation:
+      max: 10
+
+  dry_run:
+    type: boolean
+    description: Preview changes without executing them
+    required: false
+    default: false
+
+# Expected output structure
+outputs:
+  status:
+    type: text
+    description: Operation result (success, failed, recovered, etc.)
+
+  target:
+    type: text
+    description: The target resource that was processed
+
+  processed_at:
+    type: datetime
+    description: When the operation completed (ISO 8601)
