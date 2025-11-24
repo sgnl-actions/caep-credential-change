@@ -35,6 +35,7 @@
     "rollup": "^4.28.1"
   },
   "dependencies": {
-    "@sgnl-ai/secevent": "^1.0.1"
+    "@sgnl-ai/secevent": "^1.0.1",
+    "@sgnl-ai/set-transmitter": "^1.0.0"
   }
 }
