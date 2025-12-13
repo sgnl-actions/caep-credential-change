@@ -35,6 +35,7 @@
     "rollup": "^4.28.1"
   },
   "dependencies": {
-    "@sgnl-ai/secevent": "^1.0.1"
+    "@sgnl-ai/secevent": "^1.0.1",
+    "@sgnl-actions/utils": "github:sgnl-actions/utils#v1.0.3"
   }
 }
