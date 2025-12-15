@@ -1,5 +1,6 @@
 import { createBuilder } from '@sgnl-ai/secevent';
 import { createPrivateKey } from 'crypto';
+import { resolveJSONPathTemplates} from '@sgnl-actions/utils';
 
 // Event type constant
 const CREDENTIAL_CHANGE_EVENT = 'https://schemas.openid.net/secevent/caep/event-type/credential-change';
@@ -96,26 +97,34 @@ export default {
    * Transmit a CAEP Credential Change event
    */
   invoke: async (params, context) => {
+    const jobContext = context.data || {};
+
+    // Resolve JSONPath templates in params
+    const { result: resolvedParams, errors } = resolveJSONPathTemplates(params, jobContext);
+    if (errors.length > 0) {
+     console.warn('Template resolution errors:', errors);
+    }
+
     // Validate required parameters
-    if (!params.audience) {
+    if (!resolvedParams.audience) {
       throw new Error('audience is required');
     }
-    if (!params.subject) {
+    if (!resolvedParams.subject) {
       throw new Error('subject is required');
     }
-    if (!params.address) {
+    if (!resolvedParams.address) {
       throw new Error('address is required');
     }
-    if (!params.credentialType) {
+    if (!resolvedParams.credentialType) {
       throw new Error('credentialType is required');
     }
-    if (!params.changeType) {
+    if (!resolvedParams.changeType) {
       throw new Error('changeType is required');
     }
 
     // Validate changeType values
     const validChangeTypes = ['create', 'revoke', 'update', 'delete'];
-    if (!validChangeTypes.includes(params.changeType)) {
+    if (!validChangeTypes.includes(resolvedParams.changeType)) {
       throw new Error(`changeType must be one of: ${validChangeTypes.join(', ')}`);
     }
 
@@ -132,38 +141,38 @@ export default {
     }
 
     // Parse parameters
-    const issuer = params.issuer || 'https://sgnl.ai/';
-    const signingMethod = params.signingMethod || 'RS256';
-    const subject = parseSubject(params.subject);
+    const issuer = resolvedParams.issuer || 'https://sgnl.ai/';
+    const signingMethod = resolvedParams.signingMethod || 'RS256';
+    const subject = parseSubject(resolvedParams.subject);
 
     // Build event payload
     const eventPayload = {
-      event_timestamp: params.eventTimestamp || Math.floor(Date.now() / 1000),
-      credential_type: params.credentialType,
-      change_type: params.changeType
+      event_timestamp: resolvedParams.eventTimestamp || Math.floor(Date.now() / 1000),
+      credential_type: resolvedParams.credentialType,
+      change_type: resolvedParams.changeType
     };
 
     // Add optional event claims
-    if (params.friendlyName) {
-      eventPayload.friendly_name = params.friendlyName;
+    if (resolvedParams.friendlyName) {
+      eventPayload.friendly_name = resolvedParams.friendlyName;
     }
-    if (params.x509Issuer) {
-      eventPayload.x509_issuer = params.x509Issuer;
+    if (resolvedParams.x509Issuer) {
+      eventPayload.x509_issuer = resolvedParams.x509Issuer;
     }
-    if (params.x509Serial) {
-      eventPayload.x509_serial = params.x509Serial;
+    if (resolvedParams.x509Serial) {
+      eventPayload.x509_serial = resolvedParams.x509Serial;
     }
-    if (params.fido2AAGuid) {
-      eventPayload.fido2_aaguid = params.fido2AAGuid;
+    if (resolvedParams.fido2AAGuid) {
+      eventPayload.fido2_aaguid = resolvedParams.fido2AAGuid;
     }
-    if (params.initiatingEntity) {
-      eventPayload.initiating_entity = params.initiatingEntity;
+    if (resolvedParams.initiatingEntity) {
+      eventPayload.initiating_entity = resolvedParams.initiatingEntity;
     }
-    if (params.reasonAdmin) {
-      eventPayload.reason_admin = parseReason(params.reasonAdmin);
+    if (resolvedParams.reasonAdmin) {
+      eventPayload.reason_admin = parseReason(resolvedParams.reasonAdmin);
     }
-    if (params.reasonUser) {
-      eventPayload.reason_user = parseReason(params.reasonUser);
+    if (resolvedParams.reasonUser) {
+      eventPayload.reason_user = parseReason(resolvedParams.reasonUser);
     }
 
     // Create the SET
@@ -171,7 +180,7 @@ export default {
 
     builder
       .withIssuer(issuer)
-      .withAudience(params.audience)
+      .withAudience(resolvedParams.audience)
       .withIat(Math.floor(Date.now() / 1000))
       .withClaim('sub_id', subject)  // CAEP 3.0 format
       .withEvent(CREDENTIAL_CHANGE_EVENT, eventPayload);
@@ -187,12 +196,12 @@ export default {
     const { jwt } = await builder.sign(signingKey);
 
     // Build destination URL
-    const url = buildUrl(params.address, params.addressSuffix);
+    const url = buildUrl(resolvedParams.address, resolvedParams.addressSuffix);
 
     // Transmit the SET
     return await transmitSET(jwt, url, {
       authToken,
-      userAgent: params.userAgent
+      userAgent: resolvedParams.userAgent
     });
   },
 
