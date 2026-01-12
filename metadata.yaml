@@ -94,32 +94,6 @@ inputs:
       min: 1
       max: 100
 
-secrets:
-  BEARER_AUTH_TOKEN:
-    type: text
-    description: Bearer token for authenticating with the SET receiver
-    required: false
-
-  BASIC_USERNAME:
-    type: text
-    description: Username for Basic authentication
-    required: false
-
-  BASIC_PASSWORD:
-    type: text
-    description: Password for Basic authentication
-    required: false
-
-  OAUTH2_CLIENT_CREDENTIALS_CLIENT_SECRET:
-    type: text
-    description: Client secret for OAuth2 Client Credentials flow
-    required: false
-
-  OAUTH2_AUTHORIZATION_CODE_ACCESS_TOKEN:
-    type: text
-    description: Access token for OAuth2 Authorization Code flow
-    required: false
-
 outputs:
   status:
     type: text
