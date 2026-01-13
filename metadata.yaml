@@ -1,35 +1,24 @@
 name: CAEP Credential Change
 description: Transmits a Continuous Access Evaluation Protocol (CAEP) Credential Change event as a Security Event Token (SET) to a specified endpoint
-version: 1.0.0
-runtime: nodejs-22
-type: caep-transmitter
 
 inputs:
-  audience:
-    type: text
-    description: JWT audience claim - typically the CAEP event receiver's URL
-    required: true
-    validation:
-      min: 1
-      max: 500
-
   subject:
     type: text
-    description: JSON string containing the subject identifier in CAEP format
+    description: Subject identifier JSON (e.g., {"format":"email","email":"user@example.com"})
     required: true
     validation:
       min: 1
-      max: 1000
+      max: 2000
 
-  address:
+  audience:
     type: text
-    description: The URL endpoint to send the Security Event Token to
+    description: Intended recipient of the SET (e.g., https://customer.okta.com/)
     required: true
     validation:
       min: 1
       max: 500
 
-  credentialType:
+  credential_type:
     type: text
     description: Type of credential that changed (password, x509, fido2, etc.)
     required: true
@@ -37,7 +26,7 @@ inputs:
       min: 1
       max: 100
 
-  changeType:
+  change_type:
     type: text
     description: Type of change that occurred (create, revoke, update, delete)
     required: true
@@ -45,98 +34,62 @@ inputs:
       min: 1
       max: 20
 
-  friendlyName:
+  friendly_name:
     type: text
     description: Human-readable name for the credential (optional)
     required: false
     validation:
-      min: 1
       max: 200
 
-  x509Issuer:
+  x509_issuer:
     type: text
     description: X.509 certificate issuer (for x509 credential type)
     required: false
     validation:
-      min: 1
       max: 500
 
-  x509Serial:
+  x509_serial:
     type: text
     description: X.509 certificate serial number (for x509 credential type)
     required: false
     validation:
-      min: 1
       max: 200
 
-  fido2AAGuid:
+  fido2_aaguid:
     type: text
     description: FIDO2 Authenticator Attestation GUID (for fido2 credential type)
     required: false
     validation:
-      min: 1
       max: 100
 
-  issuer:
+  initiating_entity:
     type: text
-    description: JWT issuer claim - defaults to 'https://sgnl.ai/'
+    description: Entity that initiated the credential change (optional)
     required: false
     validation:
-      min: 1
-      max: 200
+      max: 100
 
-  addressSuffix:
+  reason_admin:
     type: text
-    description: Optional URL suffix to append to the address
+    description: Admin-readable reason for the change (JSON for i18n or plain string)
     required: false
     validation:
-      min: 1
-      max: 200
+      max: 1000
 
-  signingMethod:
+  reason_user:
     type: text
-    description: JWT signing algorithm - defaults to 'RS256'
+    description: User-readable reason for the change (JSON for i18n or plain string)
     required: false
     validation:
-      min: 1
-      max: 20
+      max: 1000
 
-  eventTimestamp:
-    type: number
-    description: Unix timestamp of the event - defaults to current time
-    required: false
-
-  userAgent:
+  address:
     type: text
-    description: User-Agent header value - defaults to 'SGNL-Action-Framework/1.0'
-    required: false
-    validation:
-      min: 1
-      max: 200
-
-  initiatingEntity:
-    type: text
-    description: Optional entity that initiated the credential change
+    description: Optional destination URL override (defaults to ADDRESS environment variable)
     required: false
     validation:
       min: 1
       max: 100
-
-  reasonAdmin:
-    type: text
-    description: Optional admin-readable reason for the change (JSON for i18n or plain string)
-    required: false
-    validation:
-      min: 1
-      max: 1000
-
-  reasonUser:
-    type: text
-    description: Optional user-readable reason for the change (JSON for i18n or plain string)
-    required: false
-    validation:
-      min: 1
-      max: 1000
 
 outputs:
   status:

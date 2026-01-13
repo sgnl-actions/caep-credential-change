@@ -1,341 +1,297 @@
 import { jest } from '@jest/globals';
-import script from '../src/script.mjs';
 
-// Mock fetch globally
-globalThis.fetch = jest.fn();
+// Mock dependencies before importing script
+jest.unstable_mockModule('@sgnl-ai/set-transmitter', () => ({
+  transmitSET: jest.fn().mockResolvedValue({
+    status: 'success',
+    statusCode: 200,
+    body: '{"success": true}',
+    retryable: false
+  })
+}));
+
+jest.unstable_mockModule('@sgnl-actions/utils', () => ({
+  resolveJSONPathTemplates: jest.fn((params) => ({ result: params, errors: [] })),
+  signSET: jest.fn().mockResolvedValue('mock.jwt.token'),
+  getBaseURL: jest.fn((params, context) => params.address || context.environment?.ADDRESS),
+  getAuthorizationHeader: jest.fn().mockResolvedValue('Bearer test-token')
+}));
+
+const { transmitSET } = await import('@sgnl-ai/set-transmitter');
+const { resolveJSONPathTemplates, signSET, getBaseURL, getAuthorizationHeader } = await import('@sgnl-actions/utils');
+const script = await import('../src/script.mjs');
 
 describe('CAEP Credential Change', () => {
   const validParams = {
     audience: 'https://receiver.example.com/',
     subject: '{"format":"account","uri":"acct:test@example.com"}',
     address: 'https://caep.receiver.com/events',
-    credentialType: 'password',
-    changeType: 'revoke'
+    credential_type: 'password',
+    change_type: 'revoke'
   };
 
   const mockContext = {
     secrets: {
-      SSF_KEY: `-----BEGIN PRIVATE KEY-----
-MIIEvAIBADANBgkqhkiG9w0BAQEFAASCBKYwggSiAgEAAoIBAQCVP1FMSuoWHsTt
-qnJ4BcVCADc3lFpnZjLsRiRs9WvqqdbYYrf0zqOrHoqbLMMGg601pnf20Y6e7xim
-8KK7l2L7kVvfkIGPnDqwQWlkjEx5pBLQRz1WQdnz2hr6IpfZO4Z8zyjnySv/K5LU
-nlJrzGdyHWmDKQAU9w4E2+zFmtcuwTM8mWJQoy3CBuwQ8/r+OsycRuxw0GvEA+yp
-jm4PScbMFL+g8f2yPm1ACucrc/ogCSTv+yjbXJcdy95pgpOu/IrcbbyPJLE8+9Nt
-eEr2gmNU8CzOHfflUJfAE7FHrCMJA593mKAlaULE2b53zAEVxuCSaKGiOJQ2ELhl
-jRh+MeijAgMBAAECggEADDkw195E2MXxXAO7N1BFrRembhNk6hYJMqe2AQSCr6f0
-VCmVpmOsLO4l7PqYCHcNXxkAt0LHewXbD4Ui1tlZvn/TtfY4XkIt3lSlJJqHAulo
-rw0+nUtsZdfloLnnlN+Wrq8qyv0DcPUpI+fJmVGW4VY+V4Mqogzv5X77n92EJSyG
-lMtLJCkB3AAP9ul5S4KbPs/GgMrLGKlMbfD8mTeZW0h5Bvgm34l/TLWLbnPQHtmF
-HeMzYuwZjljpKNHfWc2L22soYvpcFS9CKzEozXa8DGkvEM9ZI8o1tHvFBOiFzUDn
-Ydwl6dCm6m7PjnQ9GvR09UzPxTBLXwuKES/m28f75QKBgQDJhqOxW94it6pNtBKc
-rd3+U1DqmBY4/pJ2R5y6I5vR9fMnG7s+9tXMrP7kV5bDXLJHVX5KKTB9ydO8PyA1
-19fE3ftlIfDeZ1B+zTvwDsMyplEfOIqXMlKPViS1VvVU46HkHlwLB+nGyDSLtZPR
-XQlzkmhFB6wGWaTBftYB+3qb1wKBgQC9lw9ISvhovGKVBBOCXycKvdvtW80phUyX
-HQeXuTWYjaTP8a+0qNZ/zGgsgz+zEiXQQODreORR309p+3/DFl4YMm7SR/D6Fcc3
-CKvFBQFv6wPnc+5tyOQoq32jXPp/XY5X8NUAPR3FbqwE40gQ2qXSOB/61H6l+m0C
-JXVvMJHgFQKBgHKqo3WFWk3Sx5pS/cwcuhW9/mqdgveHEnsuoCThogXDtkjoZJCd
-DmXZgWcX13btxZsFMEiuSyMntcyE9qTsXZ9s12BiAZXqn0inKpWbMMIfFEV5fJIv
-Vf6s+1IbWpiktTcBd0nnhMNQo2VjOeqEz53tDltI1D8AvthCfS6/krIdAoGAQ4FQ
-8LW5A1noZBTCeY410Y5Oi5I/V8RdxASTGoPYwIvWni/5FwNy9Kgsg4TsHm+cxS0E
-qPMvoLM5jIv/LtB9CnKSoQ76j6FHgKH2vz0MCPSOPFA8Gh0ImC6PmqZVjxoZv9hB
-j0cznYPNfiQLGe0wU8ymHmKhAapMPBJoYQHTPw0CgYAPyVbhsQf1M0Qu0ROxhbzY
-qYeWeRz1GNGMqCHC1r1NFHuv0qvX2g7kVh2E3+OGu6Jr1TgzTXZMyFVRiPMokPQL
-uMTJPqjqASAE4C6akEErJM2yY+3pVy+OHxd5ewZskchqY3YOI26uL9tEW3rzLp18
-lUIPAweNrL/7ssEesKGGEw==
------END PRIVATE KEY-----`,
-      SSF_KEY_ID: 'test-key-id',
-      AUTH_TOKEN: 'test-bearer-token'
+      BEARER_AUTH_TOKEN: 'test-bearer-token'
+    },
+    environment: {
+      ADDRESS: 'https://default.receiver.com/events'
+    },
+    crypto: {
+      signJWT: jest.fn().mockResolvedValue('signed.jwt.token')
     }
   };
 
   beforeEach(() => {
-    globalThis.fetch.mockClear();
+    jest.clearAllMocks();
+    transmitSET.mockResolvedValue({
+      status: 'success',
+      statusCode: 200,
+      body: '{"success": true}',
+      retryable: false
+    });
+    resolveJSONPathTemplates.mockImplementation((params) => ({ result: params, errors: [] }));
+    signSET.mockResolvedValue('mock.jwt.token');
+    getBaseURL.mockImplementation((params, context) => params.address || context.environment?.ADDRESS);
+    getAuthorizationHeader.mockResolvedValue('Bearer test-token');
   });
 
   describe('invoke handler', () => {
     test('should successfully transmit SET with minimal required params', async () => {
-      globalThis.fetch.mockResolvedValueOnce({
-        ok: true,
-        status: 200,
-        text: () => Promise.resolve('{"success": true}')
-      });
-
-      const result = await script.invoke(validParams, mockContext);
+      const result = await script.default.invoke(validParams, mockContext);
 
       expect(result.status).toBe('success');
       expect(result.statusCode).toBe(200);
       expect(result.body).toBe('{"success": true}');
       expect(result.retryable).toBe(false);
 
-      expect(globalThis.fetch).toHaveBeenCalledWith(
+      expect(getBaseURL).toHaveBeenCalledWith(validParams, mockContext);
+      expect(getAuthorizationHeader).toHaveBeenCalledWith(mockContext);
+      expect(signSET).toHaveBeenCalledWith(
+        mockContext,
+        expect.objectContaining({
+          aud: 'https://receiver.example.com/',
+          sub_id: { format: 'account', uri: 'acct:test@example.com' },
+          events: expect.objectContaining({
+            'https://schemas.openid.net/secevent/caep/event-type/credential-change': expect.objectContaining({
+              event_timestamp: expect.any(Number),
+              credential_type: 'password',
+              change_type: 'revoke'
+            })
+          })
+        })
+      );
+
+      expect(transmitSET).toHaveBeenCalledWith(
+        'mock.jwt.token',
         'https://caep.receiver.com/events',
         expect.objectContaining({
-          method: 'POST',
           headers: expect.objectContaining({
-            'Accept': 'application/json',
-            'Content-Type': 'application/secevent+jwt',
-            'Authorization': 'Bearer test-bearer-token',
-            'User-Agent': 'SGNL-Action-Framework/1.0'
+            'Authorization': 'Bearer test-token',
+            'User-Agent': 'SGNL-CAEP-Hub/2.0'
           })
         })
       );
     });
 
     test('should include all optional parameters in event payload', async () => {
-      globalThis.fetch.mockResolvedValueOnce({
-        ok: true,
-        status: 200,
-        text: () => Promise.resolve('OK')
-      });
-
       const fullParams = {
         ...validParams,
-        friendlyName: 'Work Certificate',
-        x509Issuer: 'CN=Example CA,O=Example Corp',
-        x509Serial: '1234567890ABCDEF',
-        fido2AAGuid: '12345678-1234-1234-1234-123456789012',
-        initiatingEntity: 'admin',
-        reasonAdmin: '{"en": "Certificate revoked by policy", "es": "Certificado revocado por política"}',
-        reasonUser: '{"en": "Certificate expired", "es": "Certificado expirado"}',
-        eventTimestamp: 1609459200,
-        addressSuffix: '/caep',
-        userAgent: 'Custom-Agent/1.0'
+        friendly_name: 'Work Certificate',
+        x509_issuer: 'CN=Example CA,O=Example Corp',
+        x509_serial: '1234567890ABCDEF',
+        fido2_aaguid: '12345678-1234-1234-1234-123456789012',
+        initiating_entity: 'admin',
+        reason_admin: '{"en": "Certificate revoked by policy", "es": "Certificado revocado por política"}',
+        reason_user: '{"en": "Certificate expired", "es": "Certificado expirado"}'
       };
 
-      const result = await script.invoke(fullParams, mockContext);
+      const result = await script.default.invoke(fullParams, mockContext);
 
       expect(result.status).toBe('success');
-      expect(globalThis.fetch).toHaveBeenCalledWith(
-        'https://caep.receiver.com/events/caep',
+      expect(signSET).toHaveBeenCalledWith(
+        mockContext,
         expect.objectContaining({
-          headers: expect.objectContaining({
-            'User-Agent': 'Custom-Agent/1.0'
+          events: expect.objectContaining({
+            'https://schemas.openid.net/secevent/caep/event-type/credential-change': expect.objectContaining({
+              friendly_name: 'Work Certificate',
+              x509_issuer: 'CN=Example CA,O=Example Corp',
+              x509_serial: '1234567890ABCDEF',
+              fido2_aaguid: '12345678-1234-1234-1234-123456789012',
+              initiating_entity: 'admin',
+              reason_admin: { en: "Certificate revoked by policy", es: "Certificado revocado por política" },
+              reason_user: { en: "Certificate expired", es: "Certificado expirado" }
+            })
           })
         })
       );
     });
 
-    test('should validate required parameters', async () => {
-      const testCases = [
-        { params: { ...validParams, audience: undefined }, error: 'audience is required' },
-        { params: { ...validParams, subject: undefined }, error: 'subject is required' },
-        { params: { ...validParams, address: undefined }, error: 'address is required' },
-        { params: { ...validParams, credentialType: undefined }, error: 'credentialType is required' },
-        { params: { ...validParams, changeType: undefined }, error: 'changeType is required' }
-      ];
-
-      for (const { params, error } of testCases) {
-        await expect(script.invoke(params, mockContext)).rejects.toThrow(error);
-      }
-    });
-
-    test('should validate changeType values', async () => {
-      const invalidParams = {
+    test('should use ADDRESS from environment when address param not provided', async () => {
+      const paramsWithoutAddress = {
         ...validParams,
-        changeType: 'invalid'
+        address: undefined
       };
 
-      await expect(script.invoke(invalidParams, mockContext)).rejects.toThrow(
-        'changeType must be one of: create, revoke, update, delete'
+      await script.default.invoke(paramsWithoutAddress, mockContext);
+
+      expect(getBaseURL).toHaveBeenCalledWith(
+        expect.objectContaining({ address: undefined }),
+        mockContext
       );
     });
 
-    test('should accept all valid changeType values', async () => {
-      const validChangeTypes = ['create', 'revoke', 'update', 'delete'];
+    test('should parse subject JSON correctly', async () => {
+      await script.default.invoke(validParams, mockContext);
 
-      for (const changeType of validChangeTypes) {
-        globalThis.fetch.mockResolvedValueOnce({
-          ok: true,
-          status: 200,
-          text: () => Promise.resolve('OK')
-        });
-
-        const params = { ...validParams, changeType };
-        const result = await script.invoke(params, mockContext);
-        expect(result.status).toBe('success');
-      }
+      expect(signSET).toHaveBeenCalledWith(
+        mockContext,
+        expect.objectContaining({
+          sub_id: { format: 'account', uri: 'acct:test@example.com' }
+        })
+      );
     });
 
-    test('should validate subject JSON format', async () => {
+    test('should throw error for invalid subject JSON', async () => {
       const invalidParams = {
         ...validParams,
         subject: 'invalid-json'
       };
 
-      await expect(script.invoke(invalidParams, mockContext)).rejects.toThrow(
+      await expect(script.default.invoke(invalidParams, mockContext)).rejects.toThrow(
         'Invalid subject JSON'
       );
     });
 
-    test('should require SSF_KEY secret', async () => {
-      const contextWithoutKey = {
-        secrets: {
-          SSF_KEY_ID: 'test-key-id'
-        }
-      };
-
-      await expect(script.invoke(validParams, contextWithoutKey)).rejects.toThrow(
-        'SSF_KEY secret is required'
-      );
-    });
-
-    test('should require SSF_KEY_ID secret', async () => {
-      const contextWithoutKeyId = {
-        secrets: {
-          SSF_KEY: mockContext.secrets.SSF_KEY
-        }
-      };
-
-      await expect(script.invoke(validParams, contextWithoutKeyId)).rejects.toThrow(
-        'SSF_KEY_ID secret is required'
-      );
-    });
-
-    test('should handle URL building with suffix', async () => {
-      globalThis.fetch.mockResolvedValueOnce({
-        ok: true,
-        status: 200,
-        text: () => Promise.resolve('OK')
-      });
-
-      const paramsWithSuffix = {
+    test('should parse i18n reason strings as JSON objects', async () => {
+      const paramsWithI18nReason = {
         ...validParams,
-        addressSuffix: '/caep/events'
+        reason_admin: '{"en": "English reason", "es": "Razón en español"}'
       };
 
-      await script.invoke(paramsWithSuffix, mockContext);
+      await script.default.invoke(paramsWithI18nReason, mockContext);
 
-      expect(globalThis.fetch).toHaveBeenCalledWith(
-        'https://caep.receiver.com/events/caep/events',
-        expect.any(Object)
-      );
-    });
-
-    test('should handle Bearer token prefix', async () => {
-      globalThis.fetch.mockResolvedValueOnce({
-        ok: true,
-        status: 200,
-        text: () => Promise.resolve('OK')
-      });
-
-      const contextWithBearerToken = {
-        secrets: {
-          ...mockContext.secrets,
-          AUTH_TOKEN: 'Bearer already-prefixed-token'
-        }
-      };
-
-      await script.invoke(validParams, contextWithBearerToken);
-
-      expect(globalThis.fetch).toHaveBeenCalledWith(
-        expect.any(String),
+      expect(signSET).toHaveBeenCalledWith(
+        mockContext,
         expect.objectContaining({
-          headers: expect.objectContaining({
-            'Authorization': 'Bearer already-prefixed-token'
+          events: expect.objectContaining({
+            'https://schemas.openid.net/secevent/caep/event-type/credential-change': expect.objectContaining({
+              reason_admin: { en: "English reason", es: "Razón en español" }
+            })
           })
         })
       );
     });
 
-    test('should parse i18n reason strings as JSON', async () => {
-      globalThis.fetch.mockResolvedValueOnce({
-        ok: true,
-        status: 200,
-        text: () => Promise.resolve('OK')
-      });
-
-      const paramsWithI18nReason = {
-        ...validParams,
-        reasonAdmin: '{"en": "English reason", "es": "Razón en español"}'
-      };
-
-      const result = await script.invoke(paramsWithI18nReason, mockContext);
-      expect(result.status).toBe('success');
-    });
-
     test('should handle plain string reasons', async () => {
-      globalThis.fetch.mockResolvedValueOnce({
-        ok: true,
-        status: 200,
-        text: () => Promise.resolve('OK')
-      });
-
       const paramsWithStringReason = {
         ...validParams,
-        reasonAdmin: 'Simple string reason'
+        reason_admin: 'Simple string reason'
       };
 
-      const result = await script.invoke(paramsWithStringReason, mockContext);
+      await script.default.invoke(paramsWithStringReason, mockContext);
+
+      expect(signSET).toHaveBeenCalledWith(
+        mockContext,
+        expect.objectContaining({
+          events: expect.objectContaining({
+            'https://schemas.openid.net/secevent/caep/event-type/credential-change': expect.objectContaining({
+              reason_admin: 'Simple string reason'
+            })
+          })
+        })
+      );
+    });
+
+    test('should handle X.509 credential parameters', async () => {
+      const x509Params = {
+        ...validParams,
+        credential_type: 'x509',
+        change_type: 'create',
+        x509_issuer: 'CN=Test CA,O=Test Corp',
+        x509_serial: 'ABCDEF1234567890'
+      };
+
+      const result = await script.default.invoke(x509Params, mockContext);
+
       expect(result.status).toBe('success');
+      expect(signSET).toHaveBeenCalledWith(
+        mockContext,
+        expect.objectContaining({
+          events: expect.objectContaining({
+            'https://schemas.openid.net/secevent/caep/event-type/credential-change': expect.objectContaining({
+              credential_type: 'x509',
+              change_type: 'create',
+              x509_issuer: 'CN=Test CA,O=Test Corp',
+              x509_serial: 'ABCDEF1234567890'
+            })
+          })
+        })
+      );
     });
 
-    test('should throw for retryable HTTP errors', async () => {
-      const retryableCodes = [429, 502, 503, 504];
+    test('should handle FIDO2 credential parameters', async () => {
+      const fido2Params = {
+        ...validParams,
+        credential_type: 'fido2',
+        change_type: 'create',
+        fido2_aaguid: '12345678-1234-1234-1234-123456789012'
+      };
 
-      for (const code of retryableCodes) {
-        globalThis.fetch.mockResolvedValueOnce({
-          ok: false,
-          status: code,
-          statusText: 'Error',
-          text: () => Promise.resolve('Error message')
-        });
+      const result = await script.default.invoke(fido2Params, mockContext);
 
-        await expect(script.invoke(validParams, mockContext)).rejects.toThrow(
-          `SET transmission failed: ${code} Error`
-        );
-      }
+      expect(result.status).toBe('success');
+      expect(signSET).toHaveBeenCalledWith(
+        mockContext,
+        expect.objectContaining({
+          events: expect.objectContaining({
+            'https://schemas.openid.net/secevent/caep/event-type/credential-change': expect.objectContaining({
+              credential_type: 'fido2',
+              change_type: 'create',
+              fido2_aaguid: '12345678-1234-1234-1234-123456789012'
+            })
+          })
+        })
+      );
     });
 
-    test('should not throw for non-retryable HTTP errors', async () => {
-      globalThis.fetch.mockResolvedValueOnce({
-        ok: false,
-        status: 400,
-        statusText: 'Bad Request',
-        text: () => Promise.resolve('Bad request')
+    test('should resolve JSONPath templates', async () => {
+      resolveJSONPathTemplates.mockReturnValueOnce({
+        result: { ...validParams, credential_type: 'resolved-credential-type' },
+        errors: []
       });
 
-      const result = await script.invoke(validParams, mockContext);
+      await script.default.invoke(validParams, mockContext);
+
+      expect(resolveJSONPathTemplates).toHaveBeenCalledWith(validParams, {});
+    });
+
+    test('should log template resolution errors', async () => {
+      const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation();
+      resolveJSONPathTemplates.mockReturnValueOnce({
+        result: validParams,
+        errors: ['Template error 1', 'Template error 2']
+      });
+
+      await script.default.invoke(validParams, mockContext);
+
+      expect(consoleWarnSpy).toHaveBeenCalledWith('Template resolution errors:', ['Template error 1', 'Template error 2']);
+      consoleWarnSpy.mockRestore();
+    });
+
+    test('should handle transmitSET failures', async () => {
+      transmitSET.mockResolvedValueOnce({
+        status: 'failed',
+        statusCode: 400,
+        body: 'Bad request',
+        retryable: false
+      });
+
+      const result = await script.default.invoke(validParams, mockContext);
 
       expect(result.status).toBe('failed');
       expect(result.statusCode).toBe(400);
       expect(result.retryable).toBe(false);
-    });
-
-    test('should handle X.509 credential parameters', async () => {
-      globalThis.fetch.mockResolvedValueOnce({
-        ok: true,
-        status: 200,
-        text: () => Promise.resolve('OK')
-      });
-
-      const x509Params = {
-        ...validParams,
-        credentialType: 'x509',
-        changeType: 'create',
-        x509Issuer: 'CN=Test CA,O=Test Corp',
-        x509Serial: 'ABCDEF1234567890'
-      };
-
-      const result = await script.invoke(x509Params, mockContext);
-      expect(result.status).toBe('success');
-    });
-
-    test('should handle FIDO2 credential parameters', async () => {
-      globalThis.fetch.mockResolvedValueOnce({
-        ok: true,
-        status: 200,
-        text: () => Promise.resolve('OK')
-      });
-
-      const fido2Params = {
-        ...validParams,
-        credentialType: 'fido2',
-        changeType: 'create',
-        fido2AAGuid: '12345678-1234-1234-1234-123456789012'
-      };
-
-      const result = await script.invoke(fido2Params, mockContext);
-      expect(result.status).toBe('success');
     });
   });
 
@@ -348,7 +304,7 @@ lUIPAweNrL/7ssEesKGGEw==
           error: { message: `Error ${code}: Server error` }
         };
 
-        const result = await script.error(params, mockContext);
+        const result = await script.default.error(params, mockContext);
         expect(result).toEqual({ status: 'retry_requested' });
       }
     });
@@ -359,13 +315,13 @@ lUIPAweNrL/7ssEesKGGEw==
         error: testError
       };
 
-      await expect(script.error(params, mockContext)).rejects.toThrow(testError);
+      await expect(script.default.error(params, mockContext)).rejects.toThrow(testError);
     });
   });
 
   describe('halt handler', () => {
     test('should return halted status', async () => {
-      const result = await script.halt({}, mockContext);
+      const result = await script.default.halt({}, mockContext);
 
       expect(result).toEqual({ status: 'halted' });
     });

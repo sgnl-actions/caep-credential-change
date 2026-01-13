@@ -1,53 +1,9 @@
-import { createBuilder } from '@sgnl-ai/secevent';
-import { createPrivateKey } from 'crypto';
-import { resolveJSONPathTemplates} from '@sgnl-actions/utils';
+import { transmitSET } from '@sgnl-ai/set-transmitter';
+import { resolveJSONPathTemplates, signSET, getBaseURL, getAuthorizationHeader } from '@sgnl-actions/utils';
 
 // Event type constant
 const CREDENTIAL_CHANGE_EVENT = 'https://schemas.openid.net/secevent/caep/event-type/credential-change';
 
-/**
- * Transmits a Security Event Token (SET) to the specified endpoint
- * Note: This will be replaced with @sgnl-ai/set-transmitter when available
- */
-async function transmitSET(jwt, url, options = {}) {
-  const headers = {
-    'Accept': 'application/json',
-    'Content-Type': 'application/secevent+jwt',
-    'User-Agent': options.userAgent || 'SGNL-Action-Framework/1.0'
-  };
-
-  if (options.authToken) {
-    headers['Authorization'] = options.authToken.startsWith('Bearer ')
-      ? options.authToken
-      : `Bearer ${options.authToken}`;
-  }
-
-  const response = await fetch(url, {
-    method: 'POST',
-    headers,
-    body: jwt
-  });
-
-  const responseBody = await response.text();
-
-  const result = {
-    status: response.ok ? 'success' : 'failed',
-    statusCode: response.status,
-    body: responseBody,
-    retryable: false
-  };
-
-  // Determine if error is retryable
-  if (!response.ok) {
-    result.retryable = [429, 502, 503, 504].includes(response.status);
-    if (result.retryable) {
-      // Throw to trigger framework retry
-      throw new Error(`SET transmission failed: ${response.status} ${response.statusText}`);
-    }
-  }
-
-  return result;
-}
 
 /**
  * Parse subject JSON string
@@ -80,21 +36,47 @@ function parseReason(reasonStr) {
   return reasonStr;
 }
 
-/**
- * Build destination URL
- */
-function buildUrl(address, suffix) {
-  if (!suffix) {
-    return address;
-  }
-  const baseUrl = address.endsWith('/') ? address.slice(0, -1) : address;
-  const cleanSuffix = suffix.startsWith('/') ? suffix.slice(1) : suffix;
-  return `${baseUrl}/${cleanSuffix}`;
-}
-
 export default {
   /**
-   * Transmit a CAEP Credential Change event
+   * Main execution handler - transmits a CAEP Credential Change event as a Security Event Token
+   *
+   * @param {Object} params - Job input parameters
+   * @param {string} params.subject - Subject identifier JSON (e.g., {"format":"email","email":"user@example.com"})
+   * @param {string} params.audience - Intended recipient of the SET (e.g., https://customer.okta.com/)
+   * @param {string} params.address - Optional destination URL override (defaults to ADDRESS environment variable)
+   * @param {string} params.credential_type - Type of credential that changed (password, x509, fido2, etc.)
+   * @param {string} params.change_type - Type of change that occurred (create, revoke, update, delete)
+   * @param {string} params.friendly_name - Human-readable name for the credential (optional)
+   * @param {string} params.x509_issuer - X.509 certificate issuer (optional)
+   * @param {string} params.x509_serial - X.509 certificate serial number (optional)
+   * @param {string} params.fido2_aaguid - FIDO2 Authenticator Attestation GUID (optional)
+   * @param {string} params.initiating_entity - Entity that initiated the credential change (optional)
+   * @param {string} params.reason_admin - Admin-readable reason for the change (optional)
+   * @param {string} params.reason_user - User-readable reason for the change (optional)
+   *
+   * @param {Object} context - Execution context with secrets and environment
+   * @param {Object} context.environment - Environment configuration
+   * @param {string} context.environment.ADDRESS - Default destination URL for the SET transmission
+   *
+   * The configured auth type will determine which of the following environment variables and secrets are available
+   * @param {string} context.secrets.BEARER_AUTH_TOKEN
+   *
+   * @param {string} context.secrets.BASIC_USERNAME
+   * @param {string} context.secrets.BASIC_PASSWORD
+   *
+   * @param {string} context.secrets.OAUTH2_CLIENT_CREDENTIALS_CLIENT_SECRET
+   * @param {string} context.environment.OAUTH2_CLIENT_CREDENTIALS_AUDIENCE
+   * @param {string} context.environment.OAUTH2_CLIENT_CREDENTIALS_AUTH_STYLE
+   * @param {string} context.environment.OAUTH2_CLIENT_CREDENTIALS_CLIENT_ID
+   * @param {string} context.environment.OAUTH2_CLIENT_CREDENTIALS_SCOPE
+   * @param {string} context.environment.OAUTH2_CLIENT_CREDENTIALS_TOKEN_URL
+   *
+   * @param {string} context.secrets.OAUTH2_AUTHORIZATION_CODE_ACCESS_TOKEN
+   *
+   * @param {Object} context.crypto - Cryptographic operations API
+   * @param {Function} context.crypto.signJWT - Function to sign JWTs with server-side keys
+   *
+   * @returns {Object} Transmission result with status, statusCode, body, and retryable flag
    */
   invoke: async (params, context) => {
     const jobContext = context.data || {};
@@ -102,106 +84,62 @@ export default {
     // Resolve JSONPath templates in params
     const { result: resolvedParams, errors } = resolveJSONPathTemplates(params, jobContext);
     if (errors.length > 0) {
-     console.warn('Template resolution errors:', errors);
+      console.warn('Template resolution errors:', errors);
     }
 
-    // Validate required parameters
-    if (!resolvedParams.audience) {
-      throw new Error('audience is required');
-    }
-    if (!resolvedParams.subject) {
-      throw new Error('subject is required');
-    }
-    if (!resolvedParams.address) {
-      throw new Error('address is required');
-    }
-    if (!resolvedParams.credentialType) {
-      throw new Error('credentialType is required');
-    }
-    if (!resolvedParams.changeType) {
-      throw new Error('changeType is required');
-    }
-
-    // Validate changeType values
-    const validChangeTypes = ['create', 'revoke', 'update', 'delete'];
-    if (!validChangeTypes.includes(resolvedParams.changeType)) {
-      throw new Error(`changeType must be one of: ${validChangeTypes.join(', ')}`);
-    }
-
-    // Get secrets
-    const ssfKey = context.secrets?.SSF_KEY;
-    const ssfKeyId = context.secrets?.SSF_KEY_ID;
-    const authToken = context.secrets?.AUTH_TOKEN;
-
-    if (!ssfKey) {
-      throw new Error('SSF_KEY secret is required');
-    }
-    if (!ssfKeyId) {
-      throw new Error('SSF_KEY_ID secret is required');
-    }
+    const address = getBaseURL(resolvedParams, context);
+    const authHeader = await getAuthorizationHeader(context);
 
     // Parse parameters
-    const issuer = resolvedParams.issuer || 'https://sgnl.ai/';
-    const signingMethod = resolvedParams.signingMethod || 'RS256';
     const subject = parseSubject(resolvedParams.subject);
 
     // Build event payload
     const eventPayload = {
-      event_timestamp: resolvedParams.eventTimestamp || Math.floor(Date.now() / 1000),
-      credential_type: resolvedParams.credentialType,
-      change_type: resolvedParams.changeType
+      event_timestamp: Math.floor(Date.now() / 1000),
+      credential_type: resolvedParams.credential_type,
+      change_type: resolvedParams.change_type
     };
 
     // Add optional event claims
-    if (resolvedParams.friendlyName) {
-      eventPayload.friendly_name = resolvedParams.friendlyName;
+    if (resolvedParams.friendly_name) {
+      eventPayload.friendly_name = resolvedParams.friendly_name;
     }
-    if (resolvedParams.x509Issuer) {
-      eventPayload.x509_issuer = resolvedParams.x509Issuer;
+    if (resolvedParams.x509_issuer) {
+      eventPayload.x509_issuer = resolvedParams.x509_issuer;
     }
-    if (resolvedParams.x509Serial) {
-      eventPayload.x509_serial = resolvedParams.x509Serial;
+    if (resolvedParams.x509_serial) {
+      eventPayload.x509_serial = resolvedParams.x509_serial;
     }
-    if (resolvedParams.fido2AAGuid) {
-      eventPayload.fido2_aaguid = resolvedParams.fido2AAGuid;
+    if (resolvedParams.fido2_aaguid) {
+      eventPayload.fido2_aaguid = resolvedParams.fido2_aaguid;
     }
-    if (resolvedParams.initiatingEntity) {
-      eventPayload.initiating_entity = resolvedParams.initiatingEntity;
+    if (resolvedParams.initiating_entity) {
+      eventPayload.initiating_entity = resolvedParams.initiating_entity;
     }
-    if (resolvedParams.reasonAdmin) {
-      eventPayload.reason_admin = parseReason(resolvedParams.reasonAdmin);
+    if (resolvedParams.reason_admin) {
+      eventPayload.reason_admin = parseReason(resolvedParams.reason_admin);
     }
-    if (resolvedParams.reasonUser) {
-      eventPayload.reason_user = parseReason(resolvedParams.reasonUser);
+    if (resolvedParams.reason_user) {
+      eventPayload.reason_user = parseReason(resolvedParams.reason_user);
     }
 
-    // Create the SET
-    const builder = createBuilder();
-
-    builder
-      .withIssuer(issuer)
-      .withAudience(resolvedParams.audience)
-      .withIat(Math.floor(Date.now() / 1000))
-      .withClaim('sub_id', subject)  // CAEP 3.0 format
-      .withEvent(CREDENTIAL_CHANGE_EVENT, eventPayload);
-
-    // Sign the SET
-    const privateKeyObject = createPrivateKey(ssfKey);
-    const signingKey = {
-      key: privateKeyObject,
-      alg: signingMethod,
-      kid: ssfKeyId
+    // Build the SET payload (reserved claims will be added during signing)
+    const setPayload = {
+      aud: resolvedParams.audience,
+      sub_id: subject,  // CAEP 3.0 format
+      events: {
+        [CREDENTIAL_CHANGE_EVENT]: eventPayload
+      }
     };
 
-    const { jwt } = await builder.sign(signingKey);
-
-    // Build destination URL
-    const url = buildUrl(resolvedParams.address, resolvedParams.addressSuffix);
+    const jwt = await signSET(context, setPayload);
 
     // Transmit the SET
-    return await transmitSET(jwt, url, {
-      authToken,
-      userAgent: resolvedParams.userAgent
+    return await transmitSET(jwt, address, {
+      headers: {
+        'Authorization': authHeader,
+        'User-Agent': 'SGNL-CAEP-Hub/2.0'
+      }
     });
   },
 
