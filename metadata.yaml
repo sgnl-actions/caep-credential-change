@@ -1,8 +1,5 @@
 name: CAEP Credential Change
 description: Transmits a Continuous Access Evaluation Protocol (CAEP) Credential Change event as a Security Event Token (SET) to a specified endpoint
-version: 1.0.0
-runtime: nodejs-22
-type: caep-transmitter
 
 inputs:
   subject:
