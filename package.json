@@ -36,6 +36,6 @@
   },
   "dependencies": {
     "@sgnl-ai/set-transmitter": "^1.0.0",
-    "@sgnl-actions/utils": "github:sgnl-actions/utils#v1.0.4"
+    "@sgnl-actions/utils": "github:sgnl-actions/utils#v1.0.5"
   }
 }
