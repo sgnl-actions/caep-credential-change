@@ -1,9 +1,8 @@
 import { transmitSET } from '@sgnl-ai/set-transmitter';
-import { resolveJSONPathTemplates, signSET, getBaseURL, getAuthorizationHeader } from '@sgnl-actions/utils';
+import { signSET, getBaseURL, getAuthorizationHeader } from '@sgnl-actions/utils';
 
 // Event type constant
 const CREDENTIAL_CHANGE_EVENT = 'https://schemas.openid.net/secevent/caep/event-type/credential-change';
-
 
 /**
  * Parse subject JSON string
@@ -79,53 +78,46 @@ export default {
    * @returns {Object} Transmission result with status, statusCode, body, and retryable flag
    */
   invoke: async (params, context) => {
-    const jobContext = context.data || {};
 
-    // Resolve JSONPath templates in params
-    const { result: resolvedParams, errors } = resolveJSONPathTemplates(params, jobContext);
-    if (errors.length > 0) {
-      console.warn('Template resolution errors:', errors);
-    }
-
-    const address = getBaseURL(resolvedParams, context);
+    const address = getBaseURL(params, context);
     const authHeader = await getAuthorizationHeader(context);
 
     // Parse parameters
-    const subject = parseSubject(resolvedParams.subject);
+    const subject = parseSubject(params.subject);
 
     // Build event payload
     const eventPayload = {
       event_timestamp: Math.floor(Date.now() / 1000),
-      credential_type: resolvedParams.credential_type,
-      change_type: resolvedParams.change_type
+      credential_type: params.credential_type,
+      change_type: params.change_type
     };
 
     // Add optional event claims
-    if (resolvedParams.friendly_name) {
-      eventPayload.friendly_name = resolvedParams.friendly_name;
+    if (params.friendly_name) {
+      eventPayload.friendly_name = params.friendly_name;
     }
-    if (resolvedParams.x509_issuer) {
-      eventPayload.x509_issuer = resolvedParams.x509_issuer;
+    if (params.x509_issuer) {
+      eventPayload.x509_issuer = params.x509_issuer;
     }
-    if (resolvedParams.x509_serial) {
-      eventPayload.x509_serial = resolvedParams.x509_serial;
+    if (params.x509_serial) {
+      eventPayload.x509_serial = params.x509_serial;
     }
-    if (resolvedParams.fido2_aaguid) {
-      eventPayload.fido2_aaguid = resolvedParams.fido2_aaguid;
+    if (params.fido2_aaguid) {
+      eventPayload.fido2_aaguid = params.fido2_aaguid;
     }
-    if (resolvedParams.initiating_entity) {
-      eventPayload.initiating_entity = resolvedParams.initiating_entity;
+    if (params.initiating_entity) {
+      eventPayload.initiating_entity = params.initiating_entity;
     }
-    if (resolvedParams.reason_admin) {
-      eventPayload.reason_admin = parseReason(resolvedParams.reason_admin);
+    if (params.reason_admin) {
+      eventPayload.reason_admin = parseReason(params.reason_admin);
     }
-    if (resolvedParams.reason_user) {
-      eventPayload.reason_user = parseReason(resolvedParams.reason_user);
+    if (params.reason_user) {
+      eventPayload.reason_user = parseReason(params.reason_user);
     }
 
     // Build the SET payload (reserved claims will be added during signing)
     const setPayload = {
-      aud: resolvedParams.audience,
+      aud: params.audience,
       sub_id: subject,  // CAEP 3.0 format
       events: {
         [CREDENTIAL_CHANGE_EVENT]: eventPayload

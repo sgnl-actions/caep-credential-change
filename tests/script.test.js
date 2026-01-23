@@ -11,14 +11,13 @@ jest.unstable_mockModule('@sgnl-ai/set-transmitter', () => ({
 }));
 
 jest.unstable_mockModule('@sgnl-actions/utils', () => ({
-  resolveJSONPathTemplates: jest.fn((params) => ({ result: params, errors: [] })),
   signSET: jest.fn().mockResolvedValue('mock.jwt.token'),
   getBaseURL: jest.fn((params, context) => params.address || context.environment?.ADDRESS),
   getAuthorizationHeader: jest.fn().mockResolvedValue('Bearer test-token')
 }));
 
 const { transmitSET } = await import('@sgnl-ai/set-transmitter');
-const { resolveJSONPathTemplates, signSET, getBaseURL, getAuthorizationHeader } = await import('@sgnl-actions/utils');
+const { signSET, getBaseURL, getAuthorizationHeader } = await import('@sgnl-actions/utils');
 const script = await import('../src/script.mjs');
 
 describe('CAEP Credential Change', () => {
@@ -50,7 +49,6 @@ describe('CAEP Credential Change', () => {
       body: '{"success": true}',
       retryable: false
     });
-    resolveJSONPathTemplates.mockImplementation((params) => ({ result: params, errors: [] }));
     signSET.mockResolvedValue('mock.jwt.token');
     getBaseURL.mockImplementation((params, context) => params.address || context.environment?.ADDRESS);
     getAuthorizationHeader.mockResolvedValue('Bearer test-token');
@@ -253,30 +251,6 @@ describe('CAEP Credential Change', () => {
           })
         })
       );
-    });
-
-    test('should resolve JSONPath templates', async () => {
-      resolveJSONPathTemplates.mockReturnValueOnce({
-        result: { ...validParams, credential_type: 'resolved-credential-type' },
-        errors: []
-      });
-
-      await script.default.invoke(validParams, mockContext);
-
-      expect(resolveJSONPathTemplates).toHaveBeenCalledWith(validParams, {});
-    });
-
-    test('should log template resolution errors', async () => {
-      const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation();
-      resolveJSONPathTemplates.mockReturnValueOnce({
-        result: validParams,
-        errors: ['Template error 1', 'Template error 2']
-      });
-
-      await script.default.invoke(validParams, mockContext);
-
-      expect(consoleWarnSpy).toHaveBeenCalledWith('Template resolution errors:', ['Template error 1', 'Template error 2']);
-      consoleWarnSpy.mockRestore();
     });
 
     test('should handle transmitSET failures', async () => {
