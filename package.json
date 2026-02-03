@@ -35,7 +35,7 @@
     "rollup": "^4.28.1"
   },
   "dependencies": {
-    "@sgnl-actions/utils": "github:sgnl-actions/utils#v1.0.5",
+    "@sgnl-actions/utils": "github:sgnl-actions/utils#v1.0.6",
     "@sgnl-ai/set-transmitter": "^1.0.0"
   }
 }
