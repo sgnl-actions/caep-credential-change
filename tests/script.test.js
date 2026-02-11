@@ -1,4 +1,5 @@
 import { jest } from '@jest/globals';
+import { SGNL_USER_AGENT } from '@sgnl-actions/utils';
 
 // Mock dependencies before importing script
 jest.unstable_mockModule('@sgnl-ai/set-transmitter', () => ({
@@ -13,7 +14,8 @@ jest.unstable_mockModule('@sgnl-ai/set-transmitter', () => ({
 jest.unstable_mockModule('@sgnl-actions/utils', () => ({
   signSET: jest.fn().mockResolvedValue('mock.jwt.token'),
   getBaseURL: jest.fn((params, context) => params.address || context.environment?.ADDRESS),
-  getAuthorizationHeader: jest.fn().mockResolvedValue('Bearer test-token')
+  getAuthorizationHeader: jest.fn().mockResolvedValue('Bearer test-token'),
+  SGNL_USER_AGENT: 'SGNL-CAEP-Hub/2.0'
 }));
 
 const { transmitSET } = await import('@sgnl-ai/set-transmitter');
@@ -86,7 +88,7 @@ describe('CAEP Credential Change', () => {
         expect.objectContaining({
           headers: expect.objectContaining({
             'Authorization': 'Bearer test-token',
-            'User-Agent': 'SGNL-CAEP-Hub/2.0'
+            'User-Agent': SGNL_USER_AGENT
           })
         })
       );
