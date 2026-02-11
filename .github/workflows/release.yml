@@ -14,59 +14,12 @@ on:
 
 jobs:
   ci:
-    uses: ./.github/workflows/ci.yml
+    uses: sgnl-actions/.github/.github/workflows/ci.yml@b638fbaf3d0a7f9b7ef553b82b996e9766383f00 # v1.0.0
 
   release:
     needs: ci
-    runs-on: ubuntu-latest
+    uses: sgnl-actions/.github/.github/workflows/release.yml@b638fbaf3d0a7f9b7ef553b82b996e9766383f00 # v1.0.0
+    with:
+      bump: ${{ inputs.bump }}
     permissions:
       contents: write
-
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v6
-      with:
-        fetch-depth: 0
-
-    - name: Compute next version
-      id: version
-      run: |
-        LATEST=$(git tag --sort=-v:refname | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | head -1)
-        if [ -z "$LATEST" ]; then
-          LATEST="v0.0.0"
-        fi
-
-        MAJOR=$(echo "$LATEST" | sed 's/^v//' | cut -d. -f1)
-        MINOR=$(echo "$LATEST" | sed 's/^v//' | cut -d. -f2)
-        PATCH=$(echo "$LATEST" | sed 's/^v//' | cut -d. -f3)
-
-        case "${{ inputs.bump }}" in
-          major) MAJOR=$((MAJOR + 1)); MINOR=0; PATCH=0 ;;
-          minor) MINOR=$((MINOR + 1)); PATCH=0 ;;
-          patch) PATCH=$((PATCH + 1)) ;;
-        esac
-
-        TAG="v${MAJOR}.${MINOR}.${PATCH}"
-        echo "tag=$TAG" >> "$GITHUB_OUTPUT"
-        echo "Releasing $TAG (was $LATEST, bump: ${{ inputs.bump }})"
-
-    - name: Configure git
-      run: |
-        git config user.name "github-actions[bot]"
-        git config user.email "github-actions[bot]@users.noreply.github.com"
-
-    - name: Create and push tag
-      run: |
-        git tag -a "$TAG" -m "Release $TAG"
-        git push origin "$TAG"
-      env:
-        TAG: ${{ steps.version.outputs.tag }}
-
-    - name: Create GitHub Release
-      run: |
-        gh release create "$TAG" \
-          --title "$TAG" \
-          --generate-notes
-      env:
-        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        TAG: ${{ steps.version.outputs.tag }}

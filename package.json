@@ -11,7 +11,7 @@
     "test:coverage": "NODE_OPTIONS=--experimental-vm-modules jest --coverage",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
-    "validate": "node scripts/validate-metadata.js",
+    "validate": "sgnl-validate",
     "dev": "node scripts/dev-runner.js"
   },
   "keywords": [
@@ -25,16 +25,11 @@
   "author": "SGNL Engineering",
   "license": "MIT",
   "devDependencies": {
-    "@eslint/js": "^10.0.1",
-    "@rollup/plugin-commonjs": "^29.0.0",
-    "@rollup/plugin-node-resolve": "^16.0.1",
-    "@rollup/plugin-terser": "^0.4.4",
-    "acorn": "^8.15.0",
-    "acorn-walk": "^8.3.4",
-    "ajv": "^8.17.1",
+    "@sgnl-actions/eslint-config": "github:sgnl-actions/eslint-config#2b56a0c67e638f21688d73dbfb228a2f2d868235",
+    "@sgnl-actions/rollup-config": "github:sgnl-actions/rollup-config#4b8cf100076850f7281524e38b1acc0378ec48a7",
+    "@sgnl-actions/validate": "github:sgnl-actions/validate#1392b07e0c1563e729d68d2eec328ee8e03e0783",
     "eslint": "^10.0.0",
     "jest": "^30.0.5",
-    "js-yaml": "^4.1.0",
     "rollup": "^4.28.1"
   },
   "dependencies": {
