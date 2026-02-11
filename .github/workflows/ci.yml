@@ -5,6 +5,7 @@ on:
     branches: [ main ]
   pull_request:
     branches: [ main ]
+  workflow_call:
 
 jobs:
   test-and-build:
@@ -25,14 +26,18 @@ jobs:
 
     - name: Verify package-lock.json is in sync
       run: |
-        # Check if package-lock.json matches package.json
-        npm install --package-lock-only --ignore-scripts
+        npm install --package-lock-only
         if [ -n "$(git status --porcelain package-lock.json)" ]; then
           echo "Error: package-lock.json is out of sync with package.json"
-          echo "Please run 'npm install' locally and commit the updated package-lock.json"
-          git diff package-lock.json
+          echo "Please run 'npm install' and commit the updated package-lock.json"
           exit 1
         fi
+
+    - name: Validate metadata
+      run: npm run validate
+
+    - name: Lint
+      run: npm run lint
 
     - name: Run tests
       run: npm test
