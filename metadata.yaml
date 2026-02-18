@@ -1,3 +1,4 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/sgnl-actions/schemas/main/metadata.schema.json
 name: caep-credential-change
 description: Transmits a Continuous Access Evaluation Protocol (CAEP) Credential Change event as a Security Event Token (SET) to a specified endpoint
 
