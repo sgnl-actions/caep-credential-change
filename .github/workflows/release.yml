@@ -1,0 +1,25 @@
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      bump:
+        description: 'Version bump type'
+        required: true
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+
+jobs:
+  ci:
+    uses: sgnl-actions/.github/.github/workflows/ci.yml@b638fbaf3d0a7f9b7ef553b82b996e9766383f00 # v1.0.0
+
+  release:
+    needs: ci
+    uses: sgnl-actions/.github/.github/workflows/release.yml@b638fbaf3d0a7f9b7ef553b82b996e9766383f00 # v1.0.0
+    with:
+      bump: ${{ inputs.bump }}
+    permissions:
+      contents: write
