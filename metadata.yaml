@@ -1,4 +1,4 @@
-name: CAEP Credential Change
+name: caep-credential-change
 description: Transmits a Continuous Access Evaluation Protocol (CAEP) Credential Change event as a Security Event Token (SET) to a specified endpoint
 
 inputs:

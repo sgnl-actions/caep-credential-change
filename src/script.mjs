@@ -11,7 +11,7 @@ function parseSubject(subjectStr) {
   try {
     return JSON.parse(subjectStr);
   } catch (error) {
-    throw new Error(`Invalid subject JSON: ${error.message}`);
+    throw new Error(`Invalid subject JSON: ${error.message}`, { cause: error });
   }
 }
 

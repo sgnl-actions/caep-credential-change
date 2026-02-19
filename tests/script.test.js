@@ -119,8 +119,8 @@ describe('CAEP Credential Change', () => {
               x509_serial: '1234567890ABCDEF',
               fido2_aaguid: '12345678-1234-1234-1234-123456789012',
               initiating_entity: 'admin',
-              reason_admin: { en: "Certificate revoked by policy", es: "Certificado revocado por política" },
-              reason_user: { en: "Certificate expired", es: "Certificado expirado" }
+              reason_admin: { en: 'Certificate revoked by policy', es: 'Certificado revocado por política' },
+              reason_user: { en: 'Certificate expired', es: 'Certificado expirado' }
             })
           })
         })
@@ -176,7 +176,7 @@ describe('CAEP Credential Change', () => {
         expect.objectContaining({
           events: expect.objectContaining({
             'https://schemas.openid.net/secevent/caep/event-type/credential-change': expect.objectContaining({
-              reason_admin: { en: "English reason", es: "Razón en español" }
+              reason_admin: { en: 'English reason', es: 'Razón en español' }
             })
           })
         })
