@@ -27,6 +27,7 @@
   "devDependencies": {
     "@sgnl-actions/eslint-config": "github:sgnl-actions/eslint-config#2b56a0c67e638f21688d73dbfb228a2f2d868235",
     "@sgnl-actions/rollup-config": "github:sgnl-actions/rollup-config#f94654e450f82042ad8268ac69d79e03889031ee",
+    "@sgnl-actions/testing": "github:sgnl-actions/testing#a867019c83f8cefe1db426e94f41fb76e4853d7d",
     "@sgnl-actions/validate": "github:sgnl-actions/validate#1392b07e0c1563e729d68d2eec328ee8e03e0783",
     "eslint": "^10.0.0",
     "generate-license-file": "^4.1.1",
