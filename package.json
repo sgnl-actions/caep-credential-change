@@ -32,7 +32,7 @@
     "eslint": "^10.0.0",
     "generate-license-file": "^4.1.1",
     "jest": "^30.0.5",
-    "rollup": "^4.28.1"
+    "rollup": "^4.60.4"
   },
   "dependencies": {
     "@sgnl-actions/utils": "github:sgnl-actions/utils#v1.0.8",
