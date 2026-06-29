@@ -21,11 +21,10 @@ inputs:
 
   credential_type:
     type: text
-    description: Type of credential that changed (password, x509, fido2, etc.)
+    description: Type of credential that changed
     required: true
     validation:
-      min: 1
-      max: 100
+      enum: ["password", "pin", "x509", "fido2-platform", "fido2-roaming", "fido-u2f", "verifiable-credential", "phone-voice", "phone-sms", "app"]
 
   change_type:
     type: text
@@ -89,7 +88,7 @@ inputs:
     required: false
     validation:
       min: 1
-      max: 100
+      max: 500
 
 outputs:
   status:
@@ -107,3 +106,61 @@ outputs:
   retryable:
     type: boolean
     description: Whether the error is retryable (for failed requests)
+
+environment:
+  ADDRESS:
+    type: text
+    description: Base URL for the API
+    required: false
+  OAUTH2_CLIENT_CREDENTIALS_AUDIENCE:
+    type: text
+    description: OAuth2 client credentials audience
+    required: false
+  OAUTH2_CLIENT_CREDENTIALS_AUTH_STYLE:
+    type: text
+    description: OAuth2 client credentials auth style
+    required: false
+  OAUTH2_CLIENT_CREDENTIALS_CLIENT_ID:
+    type: text
+    description: OAuth2 client credentials client ID
+    required: false
+  OAUTH2_CLIENT_CREDENTIALS_SCOPE:
+    type: text
+    description: OAuth2 client credentials scope
+    required: false
+  OAUTH2_CLIENT_CREDENTIALS_TOKEN_URL:
+    type: text
+    description: OAuth2 client credentials token URL
+    required: false
+
+secrets:
+  BEARER_AUTH_TOKEN:
+    type: text
+    description: Bearer auth token
+    required: false
+  BASIC_USERNAME:
+    type: text
+    description: Basic auth username
+    required: false
+  BASIC_PASSWORD:
+    type: text
+    description: Basic auth password
+    required: false
+  OAUTH2_CLIENT_CREDENTIALS_CLIENT_SECRET:
+    type: text
+    description: OAuth2 client secret
+    required: false
+  OAUTH2_AUTHORIZATION_CODE_ACCESS_TOKEN:
+    type: text
+    description: OAuth2 authorization code access token
+    required: false
+
+optional_one_of:
+  - ["secrets.BEARER_AUTH_TOKEN"]
+  - ["secrets.BASIC_USERNAME", "secrets.BASIC_PASSWORD"]
+  - [
+      "secrets.OAUTH2_CLIENT_CREDENTIALS_CLIENT_SECRET",
+      "environment.OAUTH2_CLIENT_CREDENTIALS_CLIENT_ID",
+      "environment.OAUTH2_CLIENT_CREDENTIALS_TOKEN_URL",
+    ]
+  - ["secrets.OAUTH2_AUTHORIZATION_CODE_ACCESS_TOKEN"]
