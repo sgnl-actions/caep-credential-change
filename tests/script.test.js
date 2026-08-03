@@ -183,7 +183,7 @@ describe('CAEP Credential Change', () => {
       );
     });
 
-    test('should handle plain string reasons', async () => {
+    test('should auto-wrap plain string reasons as i18n objects', async () => {
       const paramsWithStringReason = {
         ...validParams,
         reason_admin: 'Simple string reason'
@@ -196,11 +196,51 @@ describe('CAEP Credential Change', () => {
         expect.objectContaining({
           events: expect.objectContaining({
             'https://schemas.openid.net/secevent/caep/event-type/credential-change': expect.objectContaining({
-              reason_admin: 'Simple string reason'
+              reason_admin: { en: 'Simple string reason' }
             })
           })
         })
       );
+    });
+
+    test('should not include reason fields when not provided', async () => {
+      await script.default.invoke(validParams, mockContext);
+
+      const setPayload = signSET.mock.calls[0][1];
+      const eventPayload = setPayload.events['https://schemas.openid.net/secevent/caep/event-type/credential-change'];
+      expect(eventPayload.reason_admin).toBeUndefined();
+      expect(eventPayload.reason_user).toBeUndefined();
+    });
+
+    test('should use custom event_timestamp when provided', async () => {
+      const params = {
+        ...validParams,
+        event_timestamp: '1700000000'
+      };
+
+      await script.default.invoke(params, mockContext);
+
+      expect(signSET).toHaveBeenCalledWith(
+        mockContext,
+        expect.objectContaining({
+          events: expect.objectContaining({
+            'https://schemas.openid.net/secevent/caep/event-type/credential-change': expect.objectContaining({
+              event_timestamp: 1700000000
+            })
+          })
+        })
+      );
+    });
+
+    test('should default event_timestamp to current time when not provided', async () => {
+      const before = Math.floor(Date.now() / 1000);
+      await script.default.invoke(validParams, mockContext);
+      const after = Math.floor(Date.now() / 1000);
+
+      const setPayload = signSET.mock.calls[0][1];
+      const eventPayload = setPayload.events['https://schemas.openid.net/secevent/caep/event-type/credential-change'];
+      expect(eventPayload.event_timestamp).toBeGreaterThanOrEqual(before);
+      expect(eventPayload.event_timestamp).toBeLessThanOrEqual(after);
     });
 
     test('should handle X.509 credential parameters', async () => {
