@@ -16,23 +16,22 @@ function parseSubject(subjectStr) {
 }
 
 /**
- * Parse reason JSON if it's i18n format, otherwise return as string
+ * Parse reason - auto-wraps plain strings as i18n objects per CAEP spec.
+ * If input is a JSON object, use it directly. If plain string, wrap as {"en": value}.
  */
 function parseReason(reasonStr) {
-  if (!reasonStr) return reasonStr;
+  if (!reasonStr) return undefined;
 
-  // Try to parse as JSON for i18n format
   try {
     const parsed = JSON.parse(reasonStr);
-    // If it's an object, it's likely i18n format
     if (typeof parsed === 'object' && parsed !== null) {
       return parsed;
     }
   } catch {
-    // Not JSON, treat as plain string
+    // Not JSON - fall through to auto-wrap
   }
 
-  return reasonStr;
+  return { en: reasonStr };
 }
 
 export default {
@@ -87,7 +86,9 @@ export default {
 
     // Build event payload
     const eventPayload = {
-      event_timestamp: Math.floor(Date.now() / 1000),
+      event_timestamp: params.event_timestamp
+        ? parseInt(params.event_timestamp, 10)
+        : Math.floor(Date.now() / 1000),
       credential_type: params.credential_type,
       change_type: params.change_type
     };

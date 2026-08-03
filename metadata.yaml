@@ -21,10 +21,11 @@ inputs:
 
   credential_type:
     type: text
-    description: Type of credential that changed
+    description: Type of credential that changed (password, pin, x509, fido2-platform, fido2-roaming, fido-u2f, verifiable-credential, phone-voice, phone-sms, app, or custom URI)
     required: true
     validation:
-      enum: ["password", "pin", "x509", "fido2-platform", "fido2-roaming", "fido-u2f", "verifiable-credential", "phone-voice", "phone-sms", "app"]
+      min: 1
+      max: 500
 
   change_type:
     type: text
@@ -63,10 +64,17 @@ inputs:
 
   initiating_entity:
     type: text
-    description: Entity that initiated the credential change (optional)
+    description: Entity that initiated the credential change (admin, user, policy, system)
     required: false
     validation:
       max: 100
+
+  event_timestamp:
+    type: text
+    description: Unix timestamp (seconds) when the event occurred (defaults to current time)
+    required: false
+    validation:
+      max: 20
 
   reason_admin:
     type: text
